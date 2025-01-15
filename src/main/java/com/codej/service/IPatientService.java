@@ -2,6 +2,7 @@ package com.codej.service;
 
 import com.codej.model.Patient;
 
-public interface IPatientService {
-    Patient validAndSave(Patient patient);
+import java.util.UUID;
+
+public interface IPatientService  extends ICRUDGeneric<Patient, UUID> {
 }
