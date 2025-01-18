@@ -3,8 +3,10 @@ package com.codej.controller;
 import com.codej.dto.PatientDTO;
 import com.codej.model.Patient;
 import com.codej.service.IPatientService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -12,6 +14,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("/patients")
@@ -33,18 +38,33 @@ public class PatientController {
         return ResponseEntity.ok(modelMapper.map(patient, PatientDTO.class));
     }
 
+    @GetMapping("/hateoas/{id}")
+    public EntityModel<PatientDTO> getPatientByIdHateoas(@PathVariable UUID id) throws Exception {
+        Patient patient = patientService.findById(id);
+        EntityModel<PatientDTO> resource = EntityModel.of(modelMapper.map(patient, PatientDTO.class));
+
+        resource.add(linkTo(methodOn(PatientController.class).getPatientById(id)).withSelfRel());
+        resource.add(linkTo(methodOn(PatientController.class).getPatients()).withRel("list-pacientes"));
+       // resource.add(linkTo(methodOn(PatientController.class).getCitasByPaciente(id)).withRel("citas-paciente"));
+        return resource;
+    }
+
     @PostMapping
-    public ResponseEntity<Patient> savePatient(@RequestBody Patient patient) throws Exception {
+    public ResponseEntity<PatientDTO> savePatient(@Valid @RequestBody PatientDTO dto) throws Exception {
+
+        Patient patient = modelMapper.map(dto, Patient.class);
         Patient savedPatient = patientService.save(patient);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
                 .buildAndExpand(savedPatient.getIdPatient()).toUri();
-        return ResponseEntity.created(location).body(savedPatient);
+
+        return ResponseEntity.created(location).body(modelMapper.map(savedPatient, PatientDTO.class));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Patient> updatePatient(@RequestBody Patient patient, @PathVariable UUID id) throws Exception {
-        Patient savedPatient = patientService.save(patient);
-        return ResponseEntity.ok(savedPatient);
+    public ResponseEntity<PatientDTO> updatePatient(@Valid @RequestBody PatientDTO dto, @PathVariable UUID id) throws Exception {
+        Patient patient = modelMapper.map(dto, Patient.class);
+        Patient upadatePatient = patientService.update(patient, id);
+        return ResponseEntity.ok(modelMapper.map(upadatePatient, PatientDTO.class));
     }
 
     @DeleteMapping("/{id}")
